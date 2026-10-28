@@ -2,6 +2,7 @@
 
 import json
 import math
+import os
 
 
 # Step 1: The tool. Only these four operations can run;
@@ -94,3 +95,32 @@ def run_agent(request, client, model):
             })
 
     return "Stopped after 10 model turns. Try a simpler request."
+
+
+# Step 4: A tiny command-line interface. Each request starts a fresh conversation.
+def main():
+    from openai import APIError, OpenAI
+
+    if not os.getenv("OPENAI_API_KEY"):
+        raise SystemExit("Set OPENAI_API_KEY before using OpenAI.")
+    client = OpenAI()
+    model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+    print("Calculator agent. Type 'quit' to exit.")
+
+    while True:
+        try:
+            request = input("\nYou: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            break
+        if request.lower() in ("quit", "exit"):
+            break
+        if not request:
+            continue
+        try:
+            print("Agent:", run_agent(request, client, model))
+        except APIError as error:
+            print(f"API request failed: {error}")
+
+
+if __name__ == "__main__":
+    main()
