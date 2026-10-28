@@ -120,6 +120,10 @@ Local setup: [Ollama OpenAI compatibility](https://docs.ollama.com/api/openai-co
 installed Ollama model worked: it called the calculator twice for (12 + 8) × 3 and returned 60.
 
 Run it with:
+```powershell
 python calculator_agent.py --provider ollama --model llama3.1:8b
+```
 For another local server:
+```powershell
 python calculator_agent.py --provider local --base-url http://localhost:1234/v1 --model YOUR_MODEL_ID
+```
