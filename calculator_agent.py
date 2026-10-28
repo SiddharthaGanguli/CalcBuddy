@@ -1,5 +1,6 @@
 """A small AI agent: one model, one calculator, and one loop."""
 
+import json
 import math
 
 
@@ -51,3 +52,45 @@ Use calculate for every arithmetic calculation, including intermediate steps.
 Use tool results to answer clearly and briefly. If a tool reports an error,
 explain it; do not invent a result. For non-math requests, answer normally.
 """
+
+
+# Step 3: The loop. Ask the model, run its tool calls, send results back.
+def run_agent(request, client, model):
+    messages = [
+        {"role": "system", "content": INSTRUCTIONS},
+        {"role": "user", "content": request},
+    ]
+
+    for _ in range(10):
+        response = client.chat.completions.create(
+            model=model,
+            tools=[{"type": "function", "function": CALCULATOR_TOOL}],
+            messages=messages,
+        )
+        message = response.choices[0].message
+        tool_calls = message.tool_calls or []
+
+        if not tool_calls:
+            return message.content or "No answer was returned."
+
+        messages.append(message.model_dump(exclude_none=True))
+
+        for call in tool_calls:
+            function = call.function
+            print(f"Using tool: {function.name}({function.arguments})")
+            try:
+                if function.name != "calculate":
+                    raise ValueError("Unknown tool.")
+                arguments = json.loads(function.arguments)
+                result = {"result": calculate(**arguments)}
+            except (ValueError, TypeError, OverflowError) as error:
+                result = {"error": str(error)}
+
+            print(f"Tool result: {json.dumps(result)}")
+            messages.append({
+                "role": "tool",
+                "tool_call_id": call.id,
+                "content": json.dumps(result),
+            })
+
+    return "Stopped after 10 model turns. Try a simpler request."
