@@ -1,5 +1,6 @@
 """A small AI agent: one model, one calculator, and one loop."""
 
+import argparse
 import json
 import math
 import os
@@ -101,10 +102,31 @@ def run_agent(request, client, model):
 def main():
     from openai import APIError, OpenAI
 
-    if not os.getenv("OPENAI_API_KEY"):
-        raise SystemExit("Set OPENAI_API_KEY before using OpenAI.")
-    client = OpenAI()
-    model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--provider", choices=["openai", "ollama", "local"], default="openai")
+    parser.add_argument("--model", help="Exact model name from your provider or local server")
+    parser.add_argument("--base-url", help="OpenAI-compatible API URL, including /v1")
+    args = parser.parse_args()
+
+    if args.provider == "openai":
+        if not os.getenv("OPENAI_API_KEY"):
+            raise SystemExit("Set OPENAI_API_KEY before using OpenAI.")
+        client = OpenAI(base_url=args.base_url or "https://api.openai.com/v1")
+        model = args.model or os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+    else:
+        if not args.model:
+            parser.error("--model is required for Ollama and other local servers.")
+        if args.provider == "local" and not args.base_url:
+            parser.error("--base-url is required for other local servers.")
+        client = OpenAI(
+            base_url=args.base_url or "http://localhost:11434/v1",
+            # Ollama ignores this placeholder; other servers may require a key.
+            api_key=os.getenv("LOCAL_API_KEY", "local"),
+            timeout=120.0,
+            max_retries=0,
+        )
+        model = args.model
+    print(f"Provider: {args.provider} | Model: {model}")
     print("Calculator agent. Type 'quit' to exit.")
 
     while True:
